@@ -103,10 +103,13 @@ function addNewBookToBookList(e) {
 	e.preventDefault();
 
 	// Add book book to global array
-
-
+    const newBookName = document.querySelector('#newBookName').value;
+    const newBookAuthor = document.querySelector('#newBookAuthor').value;
+    const newBookGenre = document.querySelector('#newBookGenre').value;
+    var newBook = new Book(newBookName, newBookAuthor, newBookGenre);
+    libraryBooks.push(newBook);
 	// Call addBookToLibraryTable properly to add book to the DOM
-	
+	addBookToLibraryTable(newBook);
 }
 
 // Changes book patron information, and calls 
@@ -114,16 +117,18 @@ function loanBookToPatron(e) {
 	e.preventDefault();
 
 	// Get correct book and patron
-
-
+    const loanBookId = document.querySelector('#loanBookId').value;
+    const loanCardNum = document.querySelector('#loanCardNum').value;
+    let loanBook = libraryBooks[loanBookId]
+    let loanPatron = patrons[loanCardNum]
 	// Add patron to the book's patron property
-	
-
+    loanBook.patron = loanPatron
+    
 	// Add book to the patron's book table in the DOM by calling addBookToPatronLoans()
-	
+	addBookToPatronLoans(loanBook)
 
 	// Start the book loan timer.
-	
+	changeToOverdue(loanBook)
 
 }
 
@@ -131,12 +136,18 @@ function loanBookToPatron(e) {
 function returnBookToLibrary(e){
 	e.preventDefault();
 	// check if return button was clicked, otherwise do nothing.
-
+    let target = e.target
+    if(!target.classList.contains('return')){
+        return
+    }
 	// Call removeBookFromPatronTable()
-
+    const btoReturn = target.parentElement.parentElement
+    let bookID = Number(btoReturn.getElementsByTagName('td')[0].textContent);
+    var retBook = libraryBooks[bookID];
+    removeBookFromPatronTable(retBook);
 
 	// Change the book object to have a patron of 'null'
-
+    retBook.patron = null;
 
 }
 
@@ -145,10 +156,11 @@ function addNewPatron(e) {
 	e.preventDefault();
 
 	// Add a new patron to global array
-
-
+    const newPatronName = document.querySelector('#newPatronName').value
+    let newPatron = new Patron(newPatronName)
+    patrons.push(newPatron)
 	// Call addNewPatronEntry() to add patron to the DOM
-
+    addNewPatronEntry(newPatron)
 }
 
 // Gets book info and then displays
@@ -156,9 +168,10 @@ function getBookInfo(e) {
 	e.preventDefault();
 
 	// Get correct book
-
+    const bookInfoId = document.querySelector('#bookInfoId').value;
+    const book = libraryBooks[bookInfoId]
 	// Call displayBookInfo()	
-
+    displayBookInfo(book)
 }
 
 
@@ -168,40 +181,82 @@ function getBookInfo(e) {
 // Adds a book to the library table.
 function addBookToLibraryTable(book) {
 	// Add code here
-
+    //var tr = bookTable.getElementsByTagName("tr")
+    let table_len = (bookTable.rows.length);
+    let row = bookTable.insertRow(table_len).outerHTML="<tr><td>" + book.bookId + "</td><td><strong>" + book.title + "</strong></td><td></td></tr>";
 }
 
 
 // Displays deatiled info on the book in the Book Info Section
 function displayBookInfo(book) {
 	// Add code here
-
+    let thePatron = "N/A"
+    if (book.patron){
+        thePatron = book.patron.name
+    }
+    bookInfo.innerHTML = "<p>Book Id: <span>"+
+        book.bookId+"</span></p><p>Title: <span>"+
+        book.title+"</span></p><p>Author: <span>"+
+        book.author+"</span></p><p>Genre: <span>"+
+        book.genre+"</span></p><p>Currently loaded to: <span>"+
+        thePatron +"</span></p>"
 }
 
 // Adds a book to a patron's book list with a status of 'Within due date'. 
 // (don't forget to add a 'return' button).
 function addBookToPatronLoans(book) {
 	// Add code here
-
+    let patron = book.patron
+    let patronBookTable = patronEntries.getElementsByClassName('patron')[book.patron.cardNumber].getElementsByClassName('patronLoansTable')[0]
+    let row = patronBookTable.insertRow(patronBookTable.rows.length).outerHTML="<tr><td>"+
+        book.bookId+"</td><td><strong>" + book.title + "</strong></td><td><span class='green'>Within due date</span></td><td><button class='return'>return</button></td></tr>"
+    bookTable.getElementsByTagName('tr')[book.bookId + 1].getElementsByTagName('td')[2].innerText = patron.cardNumber
 }
 
 // Adds a new patron with no books in their table to the DOM, including name, card number,
 // and blank book list (with only the <th> headers: BookID, Title, Status).
 function addNewPatronEntry(patron) {
 	// Add code here
-
+    let newPatronElement = document.createElement("div")
+    newPatronElement.className = 'patron'
+    newPatronElement.innerHTML = "<p>Name: <span>"+
+        patron.name+"</span></p><p>Card Number: <span>"+
+        patron.cardNumber+"</span></p><h4>Books on loan:</h4><table class='patronLoansTable'><tr><th>BookID</th><th>Title</th><th>Status</th>	<th>Return</th></tr></table>"
+    patronEntries.appendChild(newPatronElement)
 }
 
 
 // Removes book from patron's book table and remove patron card number from library book table
 function removeBookFromPatronTable(book) {
 	// Add code here
-
+    //patronEntries.getElementsByClassName('patron')[patron.cardNumber].getElementByClassName('patronLoansTable').getElementByTagName('tr').getElementsByTagName('')
+    var i;
+    let table = patronEntries.getElementsByClassName('patron')[book.patron.cardNumber].getElementsByClassName('patronLoansTable')[0]
+    let booksTr = table.getElementsByTagName('tr')
+    for (i = 1; i < booksTr.length; i++){
+        if (Number(booksTr[i].getElementsByTagName('td')[0].innerText) == book.bookId){
+            table.deleteRow(i)
+            bookTable.getElementsByTagName('tr')[book.bookId + 1].getElementsByTagName('td')[2].innerText = ''
+            return
+        }
+    }
+    
 }
 
 // Set status to red 'Overdue' in the book's patron's book table.
 function changeToOverdue(book) {
 	// Add code here
+    setTimeout(function() {
+			let booksTr = patronEntries.getElementsByClassName('patron')[book.patron.cardNumber].getElementsByClassName('patronLoansTable')[0].getElementsByTagName('tr');
+            let i;
+            for (i = 1; i < booksTr.length; i++){
+                if (Number(booksTr[i].getElementsByTagName('td')[0].innerText) == book.bookId){
+                    let message = booksTr[i].getElementsByTagName('td')[2];
+                    message.innerText = "Overdue";
+                    message.style.color = 'red';   
+                }
+            }
 
+		}, 3000)
 }
 
